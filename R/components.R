@@ -53,11 +53,27 @@ string_to_func <- function(func_as_string){
 #' @author Joe Peskett
 #' @export
 
-function_to_interface <- function(func){
+function_to_interface <- function(func, check_output = FALSE){
   func_string <- break_function(func = func, check_output = FALSE)
   func_args <- as.list(args(func))
-  interface <- "commandArgs(TRUE)"
+  n_args <- length(func_args)-1
+  arguments <- paste0(paste0('args[',1:n_args,']'),
+                      collapse = ',')
+  interface <- sprintf("commandArgs(TRUE)
+  if(length(args) != %s){
+    stop('Wrong number of args')
+    }
+  worker(%s)
+  "
+  , n_args, arguments)
+  if (check_output == TRUE){
+    writeLines(text = interface, 'interface.R')
+  }
+  return(list(paste(func_string,
+                    collapse= ""),
+              interface))
 }
+
 
 
 #' @title component_from_function
@@ -77,16 +93,23 @@ component_from_function <- function(func, base_image, component_output_file = NU
   inputs <- list(list(name = 'input 1'),
                  list(name = 'input 2'),
                  list(name = 'input 3'))
+  #Build R commands
+  function_call <- function_to_interface(func = func, check_output = FALSE)
+  commands <- paste(function_call[[1]], function_call[[2]])
   #Build implementation
   implementation <- list(
     container = list(
       image = base_image,
+
       command = list('R',
                      '-q', #Run quiet
-                     '-e'#Execute the commanda
-                     ),
-      args = list()
-    ))
+                     '-e',#Execute the commanda
+                     commands), #Sub in the correct commands
+      args = list(inputPath = 'exmaple',
+                  inputValue = 'another example',
+                  outputPath = 'another example')
+    )
+  )
 
   #Build the required yaml file
   component <- list(name = name,
