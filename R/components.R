@@ -88,11 +88,13 @@ component_from_function <- function(func, base_image, component_output_file = NU
 
   #Read the args of the function
   arg_list <- as.list(args(func))
+  arg_names <- names(arg_list)
+  #each component of this list needs to be a list of one element named "name"
+  input_list <- lapply(arg_names, function(x){setNames(list(x), nm = 'name')})
+  print(input_list)
   #Build the details of the
-  name <- 'Pipeline Component'
+  name <- as.character(quote(func))
   description <- 'This is a stock description, we have not added this parameter in yet'
-  inputs <- list(list(name = 'input 1'),
-                 list(name = 'input 2'))
   #Build R commands
   function_call <- function_to_interface(func = func, check_output = FALSE)
   commands <- paste(function_call[[1]], function_call[[2]])
@@ -112,16 +114,17 @@ component_from_function <- function(func, base_image, component_output_file = NU
 
   #Build the required yaml file
   component <- list(name = name,
-                    inputs = inputs,
+                    inputs = input_list,
                     implementation = implementation)
   if (is.null(component_output_file) == FALSE){
     write_yaml(component, component_output_file)
   }
+  return(list(input_list))
 }
 
 #' @title load_component_from_file
 #' @description load a kubeflow pipelines component from file
-#' @param component_path
+#' @param component_path location of the component to load
 #' @author Joe Peskett
 #' @export
 load_component_from_file <- function(component_path){
