@@ -82,7 +82,7 @@ function_to_interface <- function(func, check_output = FALSE){
 #' @author Joe Peskett
 #' @param func an R function
 #' @param base_image a base image to use for the component
-#' @param component_output an optional argument to save the component to a YAML file
+#' @param component_output_file an optional argument to save the component to a YAML file
 #' @export
 component_from_function <- function(func, base_image, component_output_file = NULL){
 
@@ -90,9 +90,9 @@ component_from_function <- function(func, base_image, component_output_file = NU
   arg_list <- as.list(args(func))
   #Build the details of the
   name <- 'Pipeline Component'
+  description <- 'This is a stock description, we have not added this parameter in yet'
   inputs <- list(list(name = 'input 1'),
-                 list(name = 'input 2'),
-                 list(name = 'input 3'))
+                 list(name = 'input 2'))
   #Build R commands
   function_call <- function_to_interface(func = func, check_output = FALSE)
   commands <- paste(function_call[[1]], function_call[[2]])
@@ -104,10 +104,9 @@ component_from_function <- function(func, base_image, component_output_file = NU
       command = list('R',
                      '-q', #Run quiet
                      '-e',#Execute the commanda
-                     commands), #Sub in the correct commands
-      args = list(inputPath = 'exmaple',
-                  inputValue = 'another example',
-                  outputPath = 'another example')
+                     commands,
+                     '--args'), #Sub in the correct commands
+      args = list()
     )
   )
 
@@ -119,6 +118,7 @@ component_from_function <- function(func, base_image, component_output_file = NU
     write_yaml(component, component_output_file)
   }
 }
+
 #' @title load_component_from_file
 #' @description load a kubeflow pipelines component from file
 #' @param component_path
