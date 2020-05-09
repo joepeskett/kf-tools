@@ -2,6 +2,15 @@
 
 This is a simple utility package to try and aid with building components for Kubeflow Pipelines in R. 
 
+## Installation
+
+```
+library(devtools)
+install_github('joepeskett/kf-tools')
+```
+
+Note that this will **not** handle the installation of the required python packages. 
+
 ## Example Usage:
 
 > Define an R function:
@@ -30,7 +39,7 @@ Depending on how useful this tool is, we may look at building functions for buil
 R Packages:
 
 * `yaml` for exporting yaml files
-* `argparse` for formatting the inputs to the component
+* `argparse` for formatting the inputs, outputs and arguments to the component. 
 
 Python Packages:
 
