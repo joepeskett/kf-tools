@@ -53,13 +53,15 @@ string_to_func <- function(func_as_string){
 #' @author Joe Peskett
 #' @export
 
+#NOTE: add argparse in here
+
 function_to_interface <- function(func, check_output = FALSE){
   func_string <- break_function(func = func, check_output = FALSE)
   func_args <- as.list(args(func))
   n_args <- length(func_args)-1
   arguments <- paste0(paste0('args[',1:n_args,']'),
                       collapse = ',')
-  interface <- sprintf("commandArgs(TRUE)
+  interface <- sprintf("args = commandArgs(TRUE)
   if(length(args) != %s){
     stop('Wrong number of args')
     }
@@ -74,7 +76,34 @@ function_to_interface <- function(func, check_output = FALSE){
               interface))
 }
 
+#' @title build_interface
+#' @description build wrap an R function in an interface to be called from Command Line
+#' @param func A function
+#' @author Joe Peskett
+#' @export
+build_interface <- function(func){
+  func_string <- break_function(func = func, check_output = FALSE)
+  func_name <- as.character(quote(func))
+  func_args <- as.list(args(func))
+  n_args <- length(func_args)-1
+  arguments <- paste0(paste0('args[',1:n_args,']'),
+                      collapse = ',')
+  interface <- sprintf(
+    "library(argparse)
+    parser = ArgumentParser(prog = %s, add_help = FALSE)
+    "
+  , func_name,)
 
+  #Write outputs
+  if (check_output == TRUE){
+  writeLines(text = interface, 'interface.R')
+  }
+  #paste everything together as an element in a list
+  return(list(paste(func_string,
+                    collapse= ""),
+              interface))
+
+}
 
 #' @title component_from_function
 #' @description this function builds a Kubeflow Pipelines component from an R function.
@@ -88,7 +117,7 @@ component_from_function <- function(func, base_image, component_output_file = NU
 
   #Read the args of the function
   arg_list <- as.list(args(func))
-  arg_names <- names(arg_list)
+  arg_names <- names(arg_list)[-length(arg_list)]
   #each component of this list needs to be a list of one element named "name"
   input_list <- lapply(arg_names, function(x){setNames(list(x), nm = 'name')})
   print(input_list)
@@ -108,7 +137,7 @@ component_from_function <- function(func, base_image, component_output_file = NU
                      '-e',#Execute the commanda
                      commands,
                      '--args'), #Sub in the correct commands
-      args = list()
+      args = lapply(arg_names, function(x){setNames(list(x), nm = 'inputValue')}
     )
   )
 
