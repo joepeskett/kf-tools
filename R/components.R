@@ -66,13 +66,19 @@ function_to_interface <- function(func, check_output = FALSE){
   if(length(args) != %s){
     stop('Wrong number of args')
     }
-  output <- worker(%s)par
+  output <- worker(%s)
   directory <- dirname(args[length(args)])
   if(dir.exists(directory)==FALSE){
     dir.create(directory,
                recursive = TRUE)
   }
-  write(output, file = args[length(args)])
+  if(any(class(output) %in% c('character', 'numeric'))){
+    writeLines(as.character(output), output_location)
+  }else if(any(class(output) %in% c('data.frame','tibble'))){
+    write.csv(output, output_location)
+  }else{
+    saveRDS(output, output_location)
+    }
   "
   , n_args+1, arguments)
   if (check_output == TRUE){
@@ -90,10 +96,10 @@ function_to_interface <- function(func, check_output = FALSE){
 #' @export
 save_output <- function(output_object, output_location){
   object_type <- class(output_object)
-  if(object_type %in% c('character', 'numeric')){
+  if(any(object_type %in% c('character', 'numeric'))){
     writeLines(as.character(output_object),
                con = output_location)
-  }else if(object_type == 'data.frame'){
+  }else if(any(object_type == 'data.frame')){
     write.csv(output_object,
               file = ouput_location)
   }else{
@@ -144,32 +150,17 @@ build_interface <- function(func){
 #' @title component_from_function
 #' @description this function builds a Kubeflow Pipelines component from an R function.
 #' Note that any packages required by the function, should be added into the
+#' @details Components are built up of inputs and outputs which are used as argumens to an implementation of a container.
 #' @author Joe Peskett
 #' @param func an R function
 #' @param base_image a base image to use for the component
 #' @param outputs_list Should be a character vector representing the outputs of the component.`
 #' @param component_output_file an optional argument to save the component to a YAML file
 #' @export
-
-#Where might we need to use outputs?
-#1 We might need them to capture return of the function.
-#This will be a single object, but could have multiple component which we want saving to different locations.
-#---------
-#2 OutputPaths may also be the inputs to functions that call write.csv or some other write function.
-# These would be captured in the normal list of args.
-#---------
-#How do we deal with BOTH there scenarios?
-#---Options---
-#1. Make it clear not to use write.csv when using this package - let the pipelines side of things handle that for you.
-#2. Setup pattern matching on the parameters to the function
-# if parameter ends with _outputPath then call it an output path
-# if the parameter ends with _inputPath then call it and input path
-# otherwise, call it a an input_Value by default.
-# This has a knockon effect on whether things should be called inputs or outputs.
-# Need to change the logic of the function below...
-
-
-
+#'
+#'
+#' write_yaml(sapply(args_vec, function(x){c(paste0('--',x), list(list(inputValue = x)))}), 'example.yaml')
+#' sapply(args_vec, function(x){c(paste0('--',x), list(list(inputValue = x)))})
 component_from_function <- function(func, base_image,
                                     outputs_list = NULL,
                                     component_output_file = NULL){
@@ -196,12 +187,8 @@ component_from_function <- function(func, base_image,
   #Build R commands
   function_call <- function_to_interface(func = func, check_output = FALSE)
   commands <- paste(function_call[[1]], function_call[[2]])
-  #argslist
-
   #Build the logic for saving our outputs:
-  for (i in outputs_list){
 
-  }
   #Build implementation
   implementation <- list(
     container = list(
