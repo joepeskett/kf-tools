@@ -22,7 +22,7 @@ add <- function(a,b){return(a+b)}
 
 ```
 library(kubeflowTools)
-component_from_function(add, base_image = r:3.6,component_output_file = 'my_first_component.yaml')
+component_from_function(add, base_image = 'r:3.6',component_output_file = 'my_first_component.yaml')
 ```
 
 > Load component when building a pipeline (in Python using the KFP SDK)
