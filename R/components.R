@@ -53,9 +53,6 @@ string_to_func <- function(func_as_string){
 #' @author Joe Peskett
 #' @export
 
-
-#NOTE: add argparse in here
-
 function_to_interface <- function(func, check_output = FALSE){
   func_string <- break_function(func = func, check_output = FALSE)
   func_args <- as.list(args(func))
@@ -64,7 +61,7 @@ function_to_interface <- function(func, check_output = FALSE){
                       collapse = ',')
   parser <- paste(
     sapply(X = names(func_args),
-           FUN = function(x){paste0("parser$add_argument('--",x,"',dest = ",x,") \n")}
+           FUN = function(x){paste0("parser$add_argument('--",x,"',dest = ",x,") \n ")}
            ), collapse  = '')
   #Convert the interface to using argparse
   interface <- paste0("
@@ -72,19 +69,23 @@ function_to_interface <- function(func, check_output = FALSE){
   if(length(args) != ",n_args+1,"){
     stop('Wrong number of args')
   }
+  parser <- ArgumentParser()
   ",parser,"
+  parser$add_argument('--return_output_path', dest = 'return_output_path')
+  args <- parser$parse_args()
+  for(i in seq(1, length(args), 1)){assign(names(args[i]), args[[i]])}
   `__return-output__` <- worker(",function_params,")
-  directory <- dirname(args[length(args)])
+  directory <- dirname(args$return_output_path)
   if(dir.exists(directory)==FALSE){
     dir.create(directory,
                recursive = TRUE)
   }
   if(any(class(`__return_output__`) %in% c('character', 'numeric'))){
-    writeLines(as.character(`__return_output__`), output_location)
+    writeLines(as.character(`__return_output__`), args$return_output_path)
   }else if(any(class(`__return_output__`) %in% c('data.frame','tibble'))){
-    write.csv(`__return_output__`, output_location)
+    write.csv(`__return_output__`, args$return_output_path)
   }else{
-    saveRDS(`__return_output__`, output_location)
+    saveRDS(`__return_output__`, args$return_output_path)
     }
   "
   )
@@ -94,37 +95,6 @@ function_to_interface <- function(func, check_output = FALSE){
   return(list(paste(func_string,
                     collapse= ""),
               interface))
-}
-
-
-
-#' @title save_output
-#' @description General function for saving outputs
-#' @param output_object the object to be saved
-#' @author Joe Peskett
-#' @export
-save_output <- function(output_object, output_location){
-  object_type <- class(output_object)
-  if(any(object_type %in% c('character', 'numeric'))){
-    writeLines(as.character(output_object),
-               con = output_location)
-  }else if(any(object_type == 'data.frame')){
-    write.csv(output_object,
-              file = ouput_location)
-  }else{
-    saveRDS(object = output_object, file = output_location)
-  }
-}
-
-
-#' @title format_output
-#' @description formats the ouput of a pipeline component
-#' @param output_list a list of the ouputs of a given function.
-#' @author Joe Peskett
-#' @export
-format_output <- function(output_list){
-  n_outputs <- length(output_list)
-
 }
 
 #' @title component_from_function
@@ -137,20 +107,18 @@ format_output <- function(output_list){
 #' @param outputs_list Should be a character vector representing the outputs of the component.`
 #' @param component_output_file an optional argument to save the component to a YAML file
 #' @export
-#'
-#'
-#' write_yaml(sapply(args_vec, function(x){c(paste0('--',x), list(list(inputValue = x)))}), 'example.yaml')
-#' sapply(args_vec, function(x){c(paste0('--',x), list(list(inputValue = x)))})
+
 component_from_function <- function(func, base_image,component_output_file = NULL) {
   #arg_names <- names(arg_list)[-length(arg_list)] # This could be removed.
   arg_list <- as.list(args(func))
+  arg_list <- arg_list[lengths(arg_list) != 0]
   input_Values <- arg_list[!grepl('_inputPath', x = names(arg_list)) & !grepl('_outputPath', x = names(arg_list))]
   input_Paths <- arg_list[grepl('_inputPath', x = names(arg_list))]
   output_Paths <- arg_list[grepl('_outputPath', x = names(arg_list))]
   #ins and outputs
   input_names <- c(names(input_Values), names(input_Paths))
   input_list <- lapply(input_names, function(x){setNames(list(x), nm = 'name')})
-  output_names <- c(names(output_Paths))
+  output_names <- c(names(output_Paths), 'return_output_path')
   output_list <- lapply(output_names, function(x){setNames(list(x), nm = 'name')})
   #Here we need to sub out our existing logic for our new logic for building the argumentslike so
   # - --parameter-name,
@@ -159,7 +127,7 @@ component_from_function <- function(func, base_image,component_output_file = NUL
   full_args_list <- c(
     sapply(names(input_Values), function(x){c(paste0('--',x), list(list(inputValue = x)))}),
     sapply(names(input_Paths), function(x){c(paste0('--',x), list(list(inputPath = x)))}),
-    sapply(names(output_Paths), function(x){c(paste0('--',x), list(list(outputPath = x)))})
+    sapply(c(names(output_Paths), 'return_output_path'), function(x){c(paste0('--',x), list(list(outputPath = x)))})
   )
   #input_val_args < lapply(arg_names, function(x){
   #  if(!grepl('_inputPath', x=x) & !grepl('_outputPath', x=x))setNames(list(x), nm = 'inputValue')
