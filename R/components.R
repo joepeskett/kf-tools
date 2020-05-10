@@ -62,22 +62,25 @@ function_to_interface <- function(func, check_output = FALSE){
   n_args <- length(func_args)-1
   arguments <- paste0(paste0('args[',1:n_args,']'),
                       collapse = ',')
-  interface <- sprintf("args = commandArgs(TRUE)
+  #Convert the interface to using argparse
+  interface <- sprintf("
+  library(argparse)
+  args = commandArgs(TRUE)
   if(length(args) != %s){
     stop('Wrong number of args')
     }
-  output <- worker(%s)
+  `__return-output__` <- worker(%s)
   directory <- dirname(args[length(args)])
   if(dir.exists(directory)==FALSE){
     dir.create(directory,
                recursive = TRUE)
   }
-  if(any(class(output) %in% c('character', 'numeric'))){
-    writeLines(as.character(output), output_location)
-  }else if(any(class(output) %in% c('data.frame','tibble'))){
-    write.csv(output, output_location)
+  if(any(class(`__return_output__`) %in% c('character', 'numeric'))){
+    writeLines(as.character(`__return_output__`), output_location)
+  }else if(any(class(`__return_output__`) %in% c('data.frame','tibble'))){
+    write.csv(`__return_output__`, output_location)
   }else{
-    saveRDS(output, output_location)
+    saveRDS(`__return_output__`, output_location)
     }
   "
   , n_args+1, arguments)
@@ -161,45 +164,53 @@ build_interface <- function(func){
 #'
 #' write_yaml(sapply(args_vec, function(x){c(paste0('--',x), list(list(inputValue = x)))}), 'example.yaml')
 #' sapply(args_vec, function(x){c(paste0('--',x), list(list(inputValue = x)))})
-component_from_function <- function(func, base_image,
-                                    outputs_list = NULL,
-                                    component_output_file = NULL){
+component_from_function <- function(func, base_image,component_output_file = NULL) {
+  #arg_names <- names(arg_list)[-length(arg_list)] # This could be removed.
   arg_list <- as.list(args(func))
-  arg_names <- names(arg_list)[-length(arg_list)]
-  input_val_args <- lapply(arg_names, function(x){
-    if(!grepl('_inputPath', x=x) & !grepl('_outputPath', x=x))setNames(list(x), nm = 'inputValue')
-    })
-  input_path_args <- lapply(arg_names, function(x){if(grepl('_inputPath',x = x)) setNames(list(x), nm = 'inputPath')})
-
-  output_path_args <- lapply(arg_names, function(x){if(grepl('_outputPath',x = x)) setNames(list(x),nm = 'outputPath')})
-  output_args <- lapply(outputs_list, function(x){setNames(list(x), nm = 'outputPath')})
-  arguments <- c(input_val_args, input_path_args, output_path_args, output_args)
-  arguments <- arguments[lengths(arguments) != 0]
+  input_Values <- arg_list[!grepl('_inputPath', x = names(arg_list)) & !grepl('_outputPath', x = names(arg_list))]
+  input_Paths <- arg_list[grepl('_inputPath', x = names(arg_list))]
+  output_Paths <- arg_list[grepl('_outputPath', x = names(arg_list))]
   #ins and outputs
-  input_names <- unname(unlist(c(input_val_args, input_path_args)))
+  input_names <- c(names(input_Values), names(input_Paths))
   input_list <- lapply(input_names, function(x){setNames(list(x), nm = 'name')})
-  output_names <- unname(unlist(c(output_path_args, output_args)))
+  output_names <- c(names(output_Paths))
   output_list <- lapply(output_names, function(x){setNames(list(x), nm = 'name')})
-  n_outputs <- length(outputs_list) # This is the number of output arguments to create
+  #Here we need to sub out our existing logic for our new logic for building the argumentslike so
+  # - --parameter-name,
+  # - inputValue: parameter-name
+  #--------------
+  full_args_list <- c(
+    sapply(names(input_Values), function(x){c(paste0('--',x), list(list(inputValue = x)))}),
+    sapply(names(input_Paths), function(x){c(paste0('--',x), list(list(inputPath = x)))}),
+    sapply(names(output_Paths), function(x){c(paste0('--',x), list(list(outputPath = x)))})
+  )
+  #input_val_args < lapply(arg_names, function(x){
+  #  if(!grepl('_inputPath', x=x) & !grepl('_outputPath', x=x))setNames(list(x), nm = 'inputValue')
+   # })
+  #input_path_args <- lapply(arg_names, function(x){if(grepl('_inputPath',x = x)) setNames(list(x), nm = 'inputPath')})
+  #output_path_args <- lapply(arg_names, function(x){if(grepl('_outputPath',x = x)) setNames(list(x),nm = 'outputPath')})
+  #output_args <- lapply(outputs_list, function(x){setNames(list(x), nm = 'outputPath')})
+  #arguments <- c(input_val_args, input_path_args, output_path_args, output_args)
+  #arguments <- arguments[lengths(arguments) != 0]
+  #n_outputs <- length(outputs_list) # This is the number of output arguments to create
   #Name and description for the component.
   name <- as.character(quote(func))
   description <- 'This is a stock description, we have not added this parameter in yet'
   #Build R commands
   function_call <- function_to_interface(func = func, check_output = FALSE)
   commands <- paste(function_call[[1]], function_call[[2]])
-  #Build the logic for saving our outputs:
+  #Build the output for return of the function:
 
   #Build implementation
   implementation <- list(
     container = list(
       image = base_image,
-
       command = list('R',
                      '-q', #Run quiet
                      '-e',#Execute the commanda
                      commands,
-                     '--args'), #Sub in the correct commands
-      args = arguments
+                     '--args'),
+      args = unname(full_args_list)
     )
   )
 
@@ -211,9 +222,7 @@ component_from_function <- function(func, base_image,
   if (is.null(component_output_file) == FALSE){
     write_yaml(component, component_output_file)
   }
-  print(input_list)
-  print(output_list)
-  return(input_list)
+  return(full_args_list)
 }
 
 #' @title load_component_from_file
