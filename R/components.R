@@ -1,5 +1,3 @@
-# Building Components
-
 #' @title break_function
 #' @description builds callable structure from the function body,
 #' @param function a function to be broken down
@@ -56,12 +54,13 @@ string_to_func <- function(func_as_string){
 function_to_interface <- function(func, check_output = FALSE){
   func_string <- break_function(func = func, check_output = FALSE)
   func_args <- as.list(args(func))
-  n_args <- length(func_args)-1
+  func_args <- func_args[lengths(func_args) != 0]
+  n_args <- length(func_args)
   function_params <- paste0(names(func_args),
                       collapse = ',')
   parser <- paste(
     sapply(X = names(func_args),
-           FUN = function(x){paste0("parser$add_argument('--",x,"',dest = ",x,") \n ")}
+           FUN = function(x){paste0("parser$add_argument('--",x,"',dest = '",x,"') \n ")}
            ), collapse  = '')
   #Convert the interface to using argparse
   interface <- paste0("
@@ -129,23 +128,11 @@ component_from_function <- function(func, base_image,component_output_file = NUL
     sapply(names(input_Paths), function(x){c(paste0('--',x), list(list(inputPath = x)))}),
     sapply(c(names(output_Paths), 'return_output_path'), function(x){c(paste0('--',x), list(list(outputPath = x)))})
   )
-  #input_val_args < lapply(arg_names, function(x){
-  #  if(!grepl('_inputPath', x=x) & !grepl('_outputPath', x=x))setNames(list(x), nm = 'inputValue')
-   # })
-  #input_path_args <- lapply(arg_names, function(x){if(grepl('_inputPath',x = x)) setNames(list(x), nm = 'inputPath')})
-  #output_path_args <- lapply(arg_names, function(x){if(grepl('_outputPath',x = x)) setNames(list(x),nm = 'outputPath')})
-  #output_args <- lapply(outputs_list, function(x){setNames(list(x), nm = 'outputPath')})
-  #arguments <- c(input_val_args, input_path_args, output_path_args, output_args)
-  #arguments <- arguments[lengths(arguments) != 0]
-  #n_outputs <- length(outputs_list) # This is the number of output arguments to create
-  #Name and description for the component.
   name <- as.character(quote(func))
   description <- 'This is a stock description, we have not added this parameter in yet'
   #Build R commands
   function_call <- function_to_interface(func = func, check_output = FALSE)
   commands <- paste(function_call[[1]], function_call[[2]])
-  #Build the output for return of the function:
-
   #Build implementation
   implementation <- list(
     container = list(
@@ -158,7 +145,6 @@ component_from_function <- function(func, base_image,component_output_file = NUL
       args = unname(full_args_list)
     )
   )
-
   #Build the required yaml file
   component <- list(name = name,
                     inputs = input_list,
@@ -169,14 +155,3 @@ component_from_function <- function(func, base_image,component_output_file = NUL
   }
   return(full_args_list)
 }
-
-#' @title load_component_from_file
-#' @description load a kubeflow pipelines component from file
-#' @param component_path location of the component to load
-#' @author Joe Peskett
-#' @export
-load_component_from_file <- function(component_path){
-  # load the yaml file, prepare in the correct format to build a KFP .tag.gz
-  return(component_def)
-}
-
