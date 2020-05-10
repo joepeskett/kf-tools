@@ -60,16 +60,20 @@ function_to_interface <- function(func, check_output = FALSE){
   func_string <- break_function(func = func, check_output = FALSE)
   func_args <- as.list(args(func))
   n_args <- length(func_args)-1
-  arguments <- paste0(paste0('args[',1:n_args,']'),
+  function_params <- paste0(names(func_args),
                       collapse = ',')
+  parser <- paste(
+    sapply(X = names(func_args),
+           FUN = function(x){paste0("parser$add_argument('--",x,"',dest = ",x,") \n")}
+           ), collapse  = '')
   #Convert the interface to using argparse
-  interface <- sprintf("
+  interface <- paste0("
   library(argparse)
-  args = commandArgs(TRUE)
-  if(length(args) != %s){
+  if(length(args) != ",n_args+1,"){
     stop('Wrong number of args')
-    }
-  `__return-output__` <- worker(%s)
+  }
+  ",parser,"
+  `__return-output__` <- worker(",function_params,")
   directory <- dirname(args[length(args)])
   if(dir.exists(directory)==FALSE){
     dir.create(directory,
@@ -83,7 +87,7 @@ function_to_interface <- function(func, check_output = FALSE){
     saveRDS(`__return_output__`, output_location)
     }
   "
-  , n_args+1, arguments)
+  )
   if (check_output == TRUE){
     writeLines(text = interface, 'interface.R')
   }
@@ -91,6 +95,8 @@ function_to_interface <- function(func, check_output = FALSE){
                     collapse= ""),
               interface))
 }
+
+
 
 #' @title save_output
 #' @description General function for saving outputs
@@ -118,35 +124,6 @@ save_output <- function(output_object, output_location){
 #' @export
 format_output <- function(output_list){
   n_outputs <- length(output_list)
-
-}
-
-#' @title build_interface
-#' @description build wrap an R function in an interface to be called from Command Line
-#' @param func A function
-#' @author Joe Peskett
-#' @export
-build_interface <- function(func){
-  func_string <- break_function(func = func, check_output = FALSE)
-  func_name <- as.character(quote(func))
-  func_args <- as.list(args(func))
-  n_args <- length(func_args)-1
-  arguments <- paste0(paste0('args[',1:n_args,']'),
-                      collapse = ',')
-  interface <- sprintf(
-    "library(argparse)
-    parser = ArgumentParser(prog = %s, add_help = FALSE)
-    "
-  , func_name,)
-
-  #Write outputs
-  if (check_output == TRUE){
-  writeLines(text = interface, 'interface.R')
-  }
-  #paste everything together as an element in a list
-  return(list(paste(func_string,
-                    collapse= ""),
-              interface))
 
 }
 
