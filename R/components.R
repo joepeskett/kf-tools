@@ -1,11 +1,13 @@
 #' @title break_function
 #' @description builds callable structure from the function body,
-#' @param function a function to be broken down
+#' @param func a function to be broken down
+#' @param check_output should we write the list out
 #' @return a string that will run in an R sesseion to
 #' 1. Define the function,
 #' 2. parse arguments to the function,
 #' 3. return the outputs of t
 #' @author Joe Peskett
+#' @import utils
 #' @export
 break_function <- function(func, check_output = FALSE){
   func_as_string <- capture.output(func)
@@ -47,7 +49,8 @@ string_to_func <- function(func_as_string){
 #' @description given a function, return it as a string
 #' and create an interface that will take arguments when called from
 #' terminal
-#' @param function The function to break up
+#' @param func The function to break up
+#' @param check_output should we save the output; for debugging purposes
 #' @author Joe Peskett
 #' @export
 
@@ -103,8 +106,9 @@ function_to_interface <- function(func, check_output = FALSE){
 #' @author Joe Peskett
 #' @param func an R function
 #' @param base_image a base image to use for the component
-#' @param outputs_list Should be a character vector representing the outputs of the component.`
 #' @param component_output_file an optional argument to save the component to a YAML file
+#' @import stats
+#' @import utils
 #' @export
 
 component_from_function <- function(func, base_image,component_output_file = NULL) {
@@ -151,7 +155,7 @@ component_from_function <- function(func, base_image,component_output_file = NUL
                     outputs = output_list,
                     implementation = implementation)
   if (is.null(component_output_file) == FALSE){
-    write_yaml(component, component_output_file)
+    yaml::write_yaml(component, component_output_file)
   }
   return(full_args_list)
 }

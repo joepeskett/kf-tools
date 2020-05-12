@@ -7,7 +7,9 @@
 function_to_interface(func, check_output = FALSE)
 }
 \arguments{
-\item{function}{The function to break up}
+\item{func}{The function to break up}
+
+\item{check_output}{should we save the output; for debugging purposes}
 }
 \description{
 given a function, return it as a string

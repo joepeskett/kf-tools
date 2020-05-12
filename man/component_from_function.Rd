@@ -12,8 +12,6 @@ component_from_function(func, base_image, component_output_file = NULL)
 \item{base_image}{a base image to use for the component}
 
 \item{component_output_file}{an optional argument to save the component to a YAML file}
-
-\item{outputs_list}{Should be a character vector representing the outputs of the component.`}
 }
 \description{
 this function builds a Kubeflow Pipelines component from an R function.

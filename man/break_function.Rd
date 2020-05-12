@@ -7,7 +7,9 @@
 break_function(func, check_output = FALSE)
 }
 \arguments{
-\item{function}{a function to be broken down}
+\item{func}{a function to be broken down}
+
+\item{check_output}{should we write the list out}
 }
 \value{
 a string that will run in an R sesseion to
