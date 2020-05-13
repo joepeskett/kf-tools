@@ -68,15 +68,12 @@ function_to_interface <- function(func, check_output = FALSE){
   #Convert the interface to using argparse
   interface <- paste0("
   library(argparse)
-  if(length(args) != ",n_args+1,"){
-    stop('Wrong number of args')
-  }
   parser <- ArgumentParser()
   ",parser,"
   parser$add_argument('--return_output_path', dest = 'return_output_path')
   args <- parser$parse_args()
   for(i in seq(1, length(args), 1)){assign(names(args[i]), args[[i]])}
-  `__return-output__` <- worker(",function_params,")
+  `__return_output__` <- worker(",function_params,")
   directory <- dirname(args$return_output_path)
   if(dir.exists(directory)==FALSE){
     dir.create(directory,
