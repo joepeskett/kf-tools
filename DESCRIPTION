@@ -1,4 +1,4 @@
-Package: kubeflowTool
+Package: kfTool
 Type: Package
 Title: A basic package for building dockerfiles and Kubeflow pipeline component in R, with R.
 Version: 0.1.0
