@@ -132,8 +132,15 @@ component_from_function <- function(func, base_image,component_output_file = NUL
   name <- as.character(quote(func))
   description <- 'This is a stock description, we have not added this parameter in yet'
   #Build R commands
+  output_logic <- paste0(
+    sapply(names(output_Paths),
+           create_outputs),
+    collapse = ',')
+  print(output_logic)
   function_call <- function_to_interface(func = func, check_output = FALSE)
-  commands <- paste(function_call[[1]], function_call[[2]])
+  commands <- paste(function_call[[1]],
+                    output_logic,
+                    function_call[[2]])
   #Build implementation
   implementation <- list(
     container = list(
@@ -155,4 +162,20 @@ component_from_function <- function(func, base_image,component_output_file = NUL
     yaml::write_yaml(component, component_output_file)
   }
   return(full_args_list)
+}
+
+
+#' @title create_outputs
+#' @description create output
+#' @author Joe Peskett
+#' @export
+create_outputs <- function(output_path){
+  return(paste0("
+    directory <- dirname(","'",output_path,"'",")
+      if(dir.exists(directory)==FALSE){
+        dir.create(directory,
+                   recursive = TRUE)
+      }
+  ")
+  )
 }

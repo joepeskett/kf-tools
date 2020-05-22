@@ -1,11 +1,11 @@
 Package: kubeflowTool
 Type: Package
-Title: A basic package for building dockerfiles, components and pipelines for use with Kubeflow
+Title: A basic package for building dockerfiles and Kubeflow pipeline component in R, with R.
 Version: 0.1.0
 Author: Joe Peskett
 Maintainer: Joe Peskett <jwpeskett@gmail.com>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Description: The key piece of this package is being able to generate a pipeline component from a single functon call in R. 
+  The output of this is a yaml file that can then be used in a Kubeflow pipeline by using the `kfp.components` module
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
